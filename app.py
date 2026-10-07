@@ -1,4 +1,5 @@
 import os
+import json 
 import streamlit as st
 from databricks.sdk import WorkspaceClient
 
@@ -126,21 +127,34 @@ try:
     # EXTRACT FILTER OPTIONS
     # --------------------------------------------------------
 
+    states_data = json.loads(
+        filter_options_result[0][0]
+    )
+
+    cities_data = json.loads(
+        filter_options_result[0][1]
+    )
+
+    segments_data = json.loads(
+        filter_options_result[0][2]
+    )
+
+
     states = ["All"] + [
         value
-        for value in filter_options_result[0][0]
+        for value in states_data
         if value is not None
     ]
 
     cities = ["All"] + [
         value
-        for value in filter_options_result[0][1]
+        for value in cities_data
         if value is not None
     ]
 
     segments = ["All"] + [
         value
-        for value in filter_options_result[0][2]
+        for value in segments_data
         if value is not None
     ]
 
