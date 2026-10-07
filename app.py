@@ -3,9 +3,10 @@ import streamlit as st
 from databricks.sdk import WorkspaceClient
 
 
-# -----------------------------
-# App configuration
-# -----------------------------
+# ============================================================
+# APP CONFIGURATION
+# ============================================================
+
 st.set_page_config(
     page_title="Customer Analytics",
     page_icon="📊",
@@ -13,22 +14,25 @@ st.set_page_config(
 )
 
 
-# -----------------------------
-# Databricks configuration
-# -----------------------------
+# ============================================================
+# DATABRICKS APP RESOURCES
+# ============================================================
+
 WAREHOUSE_ID = os.getenv("WAREHOUSE_ID")
 CUSTOMER_TABLE = os.getenv("CUSTOMER_TABLE")
 
 
-# -----------------------------
-# Databricks client
-# -----------------------------
+# ============================================================
+# DATABRICKS CLIENT
+# ============================================================
+
 w = WorkspaceClient()
 
 
-# -----------------------------
-# Execute SQL
-# -----------------------------
+# ============================================================
+# SQL EXECUTION FUNCTION
+# ============================================================
+
 def run_query(sql):
     response = w.statement_execution.execute_statement(
         warehouse_id=WAREHOUSE_ID,
@@ -37,24 +41,30 @@ def run_query(sql):
     )
 
     if response.status.state != "SUCCEEDED":
-        st.error(f"SQL execution state: {response.status.state}")
-        st.write("Full response:")
-        st.write(response)
+        st.error(f"SQL execution failed: {response.status.state}")
+        st.error(str(response))
         raise Exception("SQL execution failed")
 
     return response.result.data_array
 
 
-# -----------------------------
-# Header
-# -----------------------------
+# ============================================================
+# HEADER
+# ============================================================
+
 st.title("📊 Customer Analytics Dashboard")
-st.write("Databricks Apps + SQL Warehouse + Unity Catalog")
+
+st.write(
+    "Databricks Apps + SQL Warehouse + Unity Catalog"
+)
+
+st.divider()
 
 
-# -----------------------------
-# Check configuration
-# -----------------------------
+# ============================================================
+# RESOURCE VALIDATION
+# ============================================================
+
 if not WAREHOUSE_ID:
     st.error("WAREHOUSE_ID is not available.")
     st.stop()
@@ -64,35 +74,60 @@ if not CUSTOMER_TABLE:
     st.stop()
 
 
-# -----------------------------
-# Load KPIs
-# -----------------------------
+# ============================================================
+# LOAD CUSTOMER DATA
+# ============================================================
+
 try:
 
-    total_customers = run_query(
-        f"SELECT COUNT(*) FROM {CUSTOMER_TABLE}"
-    )[0][0]
+    # --------------------------------------------------------
+    # Total Customers
+    # --------------------------------------------------------
 
-    premium_customers = run_query(
+    total_result = run_query(
+        f"""
+        SELECT COUNT(*)
+        FROM {CUSTOMER_TABLE}
+        """
+    )
+
+    total_customers = int(total_result[0][0])
+
+
+    # --------------------------------------------------------
+    # Premium Customers
+    # --------------------------------------------------------
+
+    premium_result = run_query(
         f"""
         SELECT COUNT(*)
         FROM {CUSTOMER_TABLE}
         WHERE customer_segment = 'Premium'
         """
-    )[0][0]
+    )
 
-    enterprise_customers = run_query(
+    premium_customers = int(premium_result[0][0])
+
+
+    # --------------------------------------------------------
+    # Enterprise Customers
+    # --------------------------------------------------------
+
+    enterprise_result = run_query(
         f"""
         SELECT COUNT(*)
         FROM {CUSTOMER_TABLE}
         WHERE customer_segment = 'Enterprise'
         """
-    )[0][0]
+    )
+
+    enterprise_customers = int(enterprise_result[0][0])
 
 
-    # -----------------------------
-    # KPI cards
-    # -----------------------------
+    # ========================================================
+    # KPI CARDS
+    # ========================================================
+
     col1, col2, col3 = st.columns(3)
 
     with col1:
@@ -117,9 +152,10 @@ try:
     st.divider()
 
 
-    # -----------------------------
-    # Customer search
-    # -----------------------------
+    # ========================================================
+    # CUSTOMER SEARCH
+    # ========================================================
+
     st.subheader("🔎 Search Customers")
 
     customer_name = st.text_input(
@@ -148,9 +184,12 @@ try:
 
         results = run_query(search_sql)
 
+
         if results:
 
-            st.success(f"Found {len(results)} customer(s)")
+            st.success(
+                f"Found {len(results)} customer(s)"
+            )
 
             st.dataframe(
                 results,
@@ -159,16 +198,25 @@ try:
 
         else:
 
-            st.warning("No customers found.")
-
+            st.warning(
+                "No customers found."
+            )
 
     else:
 
-        st.info("Enter a customer name to search.")
+        st.info(
+            "Enter a customer name to search."
+        )
 
+
+# ============================================================
+# ERROR HANDLING
+# ============================================================
 
 except Exception as e:
 
-    st.error("Unable to load customer data.")
+    st.error(
+        "Unable to load customer data."
+    )
 
     st.exception(e)
