@@ -1,1 +1,9 @@
+# command: ['streamlit', 'run', 'app.py']
 command: ['streamlit', 'run', 'app.py']
+
+env:
+  - name: WAREHOUSE_ID
+    valueFrom: sql-warehouse
+
+  - name: CUSTOMER_TABLE
+    valueFrom: customer-table
