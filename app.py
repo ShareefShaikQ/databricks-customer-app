@@ -34,15 +34,22 @@ w = WorkspaceClient()
 # ============================================================
 
 def run_query(sql):
+
     response = w.statement_execution.execute_statement(
         warehouse_id=WAREHOUSE_ID,
         statement=sql,
         wait_timeout="30s"
     )
 
-    if response.status.state != "SUCCEEDED":
-        st.error(f"SQL execution failed: {response.status.state}")
+    # StatementState is an enum, so compare its name
+    if response.status.state.name != "SUCCEEDED":
+
+        st.error(
+            f"SQL execution failed: {response.status.state}"
+        )
+
         st.error(str(response))
+
         raise Exception("SQL execution failed")
 
     return response.result.data_array
@@ -66,11 +73,20 @@ st.divider()
 # ============================================================
 
 if not WAREHOUSE_ID:
-    st.error("WAREHOUSE_ID is not available.")
+
+    st.error(
+        "WAREHOUSE_ID is not available."
+    )
+
     st.stop()
 
+
 if not CUSTOMER_TABLE:
-    st.error("CUSTOMER_TABLE is not available.")
+
+    st.error(
+        "CUSTOMER_TABLE is not available."
+    )
+
     st.stop()
 
 
@@ -81,7 +97,7 @@ if not CUSTOMER_TABLE:
 try:
 
     # --------------------------------------------------------
-    # Total Customers
+    # TOTAL CUSTOMERS
     # --------------------------------------------------------
 
     total_result = run_query(
@@ -91,11 +107,13 @@ try:
         """
     )
 
-    total_customers = int(total_result[0][0])
+    total_customers = int(
+        total_result[0][0]
+    )
 
 
     # --------------------------------------------------------
-    # Premium Customers
+    # PREMIUM CUSTOMERS
     # --------------------------------------------------------
 
     premium_result = run_query(
@@ -106,11 +124,13 @@ try:
         """
     )
 
-    premium_customers = int(premium_result[0][0])
+    premium_customers = int(
+        premium_result[0][0]
+    )
 
 
     # --------------------------------------------------------
-    # Enterprise Customers
+    # ENTERPRISE CUSTOMERS
     # --------------------------------------------------------
 
     enterprise_result = run_query(
@@ -121,7 +141,9 @@ try:
         """
     )
 
-    enterprise_customers = int(enterprise_result[0][0])
+    enterprise_customers = int(
+        enterprise_result[0][0]
+    )
 
 
     # ========================================================
@@ -131,18 +153,21 @@ try:
     col1, col2, col3 = st.columns(3)
 
     with col1:
+
         st.metric(
             "Total Customers",
             total_customers
         )
 
     with col2:
+
         st.metric(
             "Premium Customers",
             premium_customers
         )
 
     with col3:
+
         st.metric(
             "Enterprise Customers",
             enterprise_customers
