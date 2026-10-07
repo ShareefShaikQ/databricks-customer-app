@@ -41,7 +41,6 @@ def run_query(sql):
         wait_timeout="30s"
     )
 
-    # StatementState is an enum, so compare its name
     if response.status.state.name != "SUCCEEDED":
 
         st.error(
@@ -74,87 +73,28 @@ st.divider()
 
 if not WAREHOUSE_ID:
 
-    st.error(
-        "WAREHOUSE_ID is not available."
-    )
+    st.error("WAREHOUSE_ID is not available.")
 
     st.stop()
 
 
 if not CUSTOMER_TABLE:
 
-    st.error(
-        "CUSTOMER_TABLE is not available."
-    )
+    st.error("CUSTOMER_TABLE is not available.")
 
     st.stop()
 
 
 # ============================================================
-# LOAD CUSTOMER DATA
-# ============================================================
-
-# try:
-
-    # --------------------------------------------------------
-    # TOTAL CUSTOMERS
-    # --------------------------------------------------------
-
-    # total_result = run_query(
-    #     f"""
-    #     SELECT COUNT(*)
-    #     FROM {CUSTOMER_TABLE}
-    #     """
-    # )
-
-    # total_customers = int(
-    #     total_result[0][0]
-    # )
-
-
-    # # --------------------------------------------------------
-    # # PREMIUM CUSTOMERS
-    # # --------------------------------------------------------
-
-    # premium_result = run_query(
-    #     f"""
-    #     SELECT COUNT(*)
-    #     FROM {CUSTOMER_TABLE}
-    #     WHERE customer_segment = 'Premium'
-    #     """
-    # )
-
-    # premium_customers = int(
-    #     premium_result[0][0]
-    # )
-
-
-    # # --------------------------------------------------------
-    # # ENTERPRISE CUSTOMERS
-    # # --------------------------------------------------------
-
-    # enterprise_result = run_query(
-    #     f"""
-    #     SELECT COUNT(*)
-    #     FROM {CUSTOMER_TABLE}
-    #     WHERE customer_segment = 'Enterprise'
-    #     """
-    # )
-
-    # enterprise_customers = int(
-    #     enterprise_result[0][0]
-    # )
-
-    
-    # ============================================================
-# LOAD CUSTOMER DATA
+# MAIN APPLICATION
 # ============================================================
 
 try:
 
-    # --------------------------------------------------------
-    # KPI QUERY - ONE SQL QUERY FOR ALL METRICS
-    # --------------------------------------------------------
+    # ========================================================
+    # KPI QUERY
+    # One SQL query for all KPI metrics
+    # ========================================================
 
     kpi_result = run_query(
         f"""
@@ -181,9 +121,10 @@ try:
         """
     )
 
-    # --------------------------------------------------------
+
+    # ========================================================
     # EXTRACT KPI VALUES
-    # --------------------------------------------------------
+    # ========================================================
 
     total_customers = int(kpi_result[0][0])
     premium_customers = int(kpi_result[0][1])
@@ -197,18 +138,21 @@ try:
     col1, col2, col3 = st.columns(3)
 
     with col1:
+
         st.metric(
             "Total Customers",
             total_customers
         )
 
     with col2:
+
         st.metric(
             "Premium Customers",
             premium_customers
         )
 
     with col3:
+
         st.metric(
             "Enterprise Customers",
             enterprise_customers
@@ -219,156 +163,158 @@ try:
 
 
     # ========================================================
-    # CUSTOMER SEARCH
+    # CUSTOMER FILTERS
     # ========================================================
 
-    st.subheader("🔎 Search Customers")
-
-    customer_name = st.text_input(
-        "Customer Name",
-        placeholder="Enter customer name..."
-    )
-
-    if customer_name:
-
-        search_sql = f"""
-        SELECT
-            customer_id,
-            customer_name,
-            email,
-            city,
-            state,
-            gender,
-            customer_segment,
-            signup_date
-        FROM {CUSTOMER_TABLE}
-        WHERE LOWER(customer_name)
-              LIKE LOWER('%{customer_name}%')
-        ORDER BY customer_name
-        """
-
-        results = run_query(search_sql)
-
-        if results:
-
-            st.success(
-                f"Found {len(results)} customer(s)"
-            )
-
-            st.dataframe(
-                results,
-                use_container_width=True
-            )
-
-        else:
-
-            st.warning(
-                "No customers found."
-            )
-
-    else:
-
-        st.info(
-            "Enter a customer name to search."
-        )
-
-
-# ============================================================
-# ERROR HANDLING
-# ============================================================
-
-except Exception as e:
-
-    st.error(
-        "Unable to load customer data."
-    )
-
-    st.exception(e)
-    # ========================================================
-    # KPI CARDS
-    # ========================================================
+    st.subheader("🔎 Customer Filters")
 
     col1, col2, col3 = st.columns(3)
 
+
+    # --------------------------------------------------------
+    # STATE FILTER
+    # --------------------------------------------------------
+
     with col1:
 
-        st.metric(
-            "Total Customers",
-            total_customers
+        state = st.selectbox(
+            "State",
+            [
+                "All",
+                "Andhra Pradesh",
+                "Telangana",
+                "Karnataka",
+                "Tamil Nadu"
+            ]
         )
+
+
+    # --------------------------------------------------------
+    # CITY FILTER
+    # --------------------------------------------------------
 
     with col2:
 
-        st.metric(
-            "Premium Customers",
-            premium_customers
+        city = st.selectbox(
+            "City",
+            [
+                "All",
+                "Visakhapatnam",
+                "Vijayawada",
+                "Hyderabad",
+                "Bengaluru",
+                "Chennai"
+            ]
         )
+
+
+    # --------------------------------------------------------
+    # SEGMENT FILTER
+    # --------------------------------------------------------
 
     with col3:
 
-        st.metric(
-            "Enterprise Customers",
-            enterprise_customers
+        segment = st.selectbox(
+            "Customer Segment",
+            [
+                "All",
+                "Standard",
+                "Premium",
+                "Enterprise"
+            ]
         )
 
 
-    st.divider()
+    # ========================================================
+    # BUILD FILTER CONDITIONS
+    # ========================================================
+
+    conditions = []
+
+
+    if state != "All":
+
+        conditions.append(
+            f"state = '{state}'"
+        )
+
+
+    if city != "All":
+
+        conditions.append(
+            f"city = '{city}'"
+        )
+
+
+    if segment != "All":
+
+        conditions.append(
+            f"customer_segment = '{segment}'"
+        )
 
 
     # ========================================================
-    # CUSTOMER SEARCH
+    # BUILD WHERE CLAUSE
     # ========================================================
 
-    st.subheader("🔎 Search Customers")
+    where_clause = ""
 
-    customer_name = st.text_input(
-        "Customer Name",
-        placeholder="Enter customer name..."
-    )
+    if conditions:
 
-
-    if customer_name:
-
-        search_sql = f"""
-        SELECT
-            customer_id,
-            customer_name,
-            email,
-            city,
-            state,
-            gender,
-            customer_segment,
-            signup_date
-        FROM {CUSTOMER_TABLE}
-        WHERE LOWER(customer_name)
-              LIKE LOWER('%{customer_name}%')
-        ORDER BY customer_name
-        """
-
-        results = run_query(search_sql)
+        where_clause = (
+            "WHERE " +
+            " AND ".join(conditions)
+        )
 
 
-        if results:
+    # ========================================================
+    # FILTER QUERY
+    # ========================================================
 
-            st.success(
-                f"Found {len(results)} customer(s)"
-            )
+    filter_sql = f"""
+    SELECT
+        customer_id,
+        customer_name,
+        email,
+        city,
+        state,
+        gender,
+        customer_segment,
+        signup_date
 
-            st.dataframe(
-                results,
-                use_container_width=True
-            )
+    FROM {CUSTOMER_TABLE}
 
-        else:
+    {where_clause}
 
-            st.warning(
-                "No customers found."
-            )
+    ORDER BY customer_name
+    """
+
+
+    results = run_query(filter_sql)
+
+
+    # ========================================================
+    # CUSTOMER RESULTS
+    # ========================================================
+
+    st.subheader("Customer Results")
+
+
+    if results:
+
+        st.success(
+            f"Found {len(results)} customer(s)"
+        )
+
+        st.dataframe(
+            results,
+            use_container_width=True
+        )
 
     else:
 
-        st.info(
-            "Enter a customer name to search."
+        st.warning(
+            "No customers found."
         )
 
 
