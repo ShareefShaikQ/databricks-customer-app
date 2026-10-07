@@ -90,6 +90,21 @@ if not CUSTOMER_TABLE:
 # ============================================================
 
 try:
+    # ========================================================
+# LOAD FILTER OPTIONS
+# ========================================================
+
+    state_result = run_query(
+        f"""
+        SELECT DISTINCT state
+        FROM {CUSTOMER_TABLE}
+        WHERE state IS NOT NULL
+        ORDER BY state
+        """
+    )
+
+    states = ["All"] + [row[0] for row in state_result]
+
 
     # ========================================================
     # KPI QUERY
@@ -179,13 +194,7 @@ try:
 
         state = st.selectbox(
             "State",
-            [
-                "All",
-                "Andhra Pradesh",
-                "Telangana",
-                "Karnataka",
-                "Tamil Nadu"
-            ]
+            states
         )
 
 
