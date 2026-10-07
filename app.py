@@ -37,8 +37,10 @@ def run_query(sql):
     )
 
     if response.status.state != "SUCCEEDED":
-        error_message = response.status.error.message if response.status.error else "Unknown SQL error"
-        raise Exception(error_message)
+        st.error(f"SQL execution state: {response.status.state}")
+        st.write("Full response:")
+        st.write(response)
+        raise Exception("SQL execution failed")
 
     return response.result.data_array
 
