@@ -96,46 +96,59 @@ if not CUSTOMER_TABLE:
 try:
 
     # ========================================================
-    # LOAD STATE FILTER OPTIONS
+    # 1. LOAD ALL FILTER OPTIONS
+    #
+    # ONE SQL QUERY:
+    # State + City + Customer Segment
     # ========================================================
 
-    state_result = run_query(
+    filter_options_result = run_query(
         f"""
-        SELECT DISTINCT state
+        SELECT
+            sort_array(
+                collect_set(state)
+            ) AS states,
+
+            sort_array(
+                collect_set(city)
+            ) AS cities,
+
+            sort_array(
+                collect_set(customer_segment)
+            ) AS segments
+
         FROM {CUSTOMER_TABLE}
-        WHERE state IS NOT NULL
-        ORDER BY state
         """
     )
+
+
+    # --------------------------------------------------------
+    # EXTRACT FILTER OPTIONS
+    # --------------------------------------------------------
 
     states = ["All"] + [
-        row[0]
-        for row in state_result
+        value
+        for value in filter_options_result[0][0]
+        if value is not None
     ]
-
-
-    # ========================================================
-    # LOAD CITY FILTER OPTIONS
-    # ========================================================
-
-    city_result = run_query(
-        f"""
-        SELECT DISTINCT city
-        FROM {CUSTOMER_TABLE}
-        WHERE city IS NOT NULL
-        ORDER BY city
-        """
-    )
 
     cities = ["All"] + [
-        row[0]
-        for row in city_result
+        value
+        for value in filter_options_result[0][1]
+        if value is not None
+    ]
+
+    segments = ["All"] + [
+        value
+        for value in filter_options_result[0][2]
+        if value is not None
     ]
 
 
     # ========================================================
-    # KPI QUERY
-    # One SQL query for all KPI metrics
+    # 2. KPI QUERY
+    #
+    # ONE SQL QUERY FOR ALL KPI METRICS
     # ========================================================
 
     kpi_result = run_query(
@@ -164,9 +177,9 @@ try:
     )
 
 
-    # ========================================================
+    # --------------------------------------------------------
     # EXTRACT KPI VALUES
-    # ========================================================
+    # --------------------------------------------------------
 
     total_customers = int(
         kpi_result[0][0]
@@ -182,7 +195,7 @@ try:
 
 
     # ========================================================
-    # KPI CARDS
+    # 3. KPI CARDS
     # ========================================================
 
     col1, col2, col3 = st.columns(3)
@@ -213,7 +226,7 @@ try:
 
 
     # ========================================================
-    # CUSTOMER FILTERS
+    # 4. CUSTOMER FILTERS
     # ========================================================
 
     st.subheader("🔎 Customer Filters")
@@ -221,9 +234,9 @@ try:
     col1, col2, col3 = st.columns(3)
 
 
-    # ========================================================
-    # STATE FILTER
-    # ========================================================
+    # --------------------------------------------------------
+    # STATE
+    # --------------------------------------------------------
 
     with col1:
 
@@ -233,9 +246,9 @@ try:
         )
 
 
-    # ========================================================
-    # CITY FILTER
-    # ========================================================
+    # --------------------------------------------------------
+    # CITY
+    # --------------------------------------------------------
 
     with col2:
 
@@ -245,26 +258,25 @@ try:
         )
 
 
-    # ========================================================
-    # CUSTOMER SEGMENT FILTER
-    # Still hardcoded - we will make this dynamic next
-    # ========================================================
+    # --------------------------------------------------------
+    # CUSTOMER SEGMENT
+    # --------------------------------------------------------
 
     with col3:
 
         segment = st.selectbox(
             "Customer Segment",
-            [
-                "All",
-                "Standard",
-                "Premium",
-                "Enterprise"
-            ]
+            segments
         )
 
 
     # ========================================================
-    # BUILD FILTER CONDITIONS
+    # 5. BUILD FILTER CONDITIONS
+    #
+    # NOTE:
+    # This is temporary dynamic SQL.
+    # We will replace this with parameterized SQL
+    # in the next phase.
     # ========================================================
 
     conditions = []
@@ -292,7 +304,7 @@ try:
 
 
     # ========================================================
-    # BUILD WHERE CLAUSE
+    # 6. BUILD WHERE CLAUSE
     # ========================================================
 
     where_clause = ""
@@ -306,7 +318,7 @@ try:
 
 
     # ========================================================
-    # FILTER QUERY
+    # 7. CUSTOMER RESULT QUERY
     # ========================================================
 
     filter_sql = f"""
@@ -328,17 +340,13 @@ try:
     """
 
 
-    # ========================================================
-    # EXECUTE FILTER QUERY
-    # ========================================================
-
     results = run_query(
         filter_sql
     )
 
 
     # ========================================================
-    # CUSTOMER RESULTS
+    # 8. CUSTOMER RESULTS
     # ========================================================
 
     st.subheader(
