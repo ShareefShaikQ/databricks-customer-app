@@ -94,58 +94,196 @@ if not CUSTOMER_TABLE:
 # LOAD CUSTOMER DATA
 # ============================================================
 
-try:
+# try:
 
     # --------------------------------------------------------
     # TOTAL CUSTOMERS
     # --------------------------------------------------------
 
-    total_result = run_query(
+    # total_result = run_query(
+    #     f"""
+    #     SELECT COUNT(*)
+    #     FROM {CUSTOMER_TABLE}
+    #     """
+    # )
+
+    # total_customers = int(
+    #     total_result[0][0]
+    # )
+
+
+    # # --------------------------------------------------------
+    # # PREMIUM CUSTOMERS
+    # # --------------------------------------------------------
+
+    # premium_result = run_query(
+    #     f"""
+    #     SELECT COUNT(*)
+    #     FROM {CUSTOMER_TABLE}
+    #     WHERE customer_segment = 'Premium'
+    #     """
+    # )
+
+    # premium_customers = int(
+    #     premium_result[0][0]
+    # )
+
+
+    # # --------------------------------------------------------
+    # # ENTERPRISE CUSTOMERS
+    # # --------------------------------------------------------
+
+    # enterprise_result = run_query(
+    #     f"""
+    #     SELECT COUNT(*)
+    #     FROM {CUSTOMER_TABLE}
+    #     WHERE customer_segment = 'Enterprise'
+    #     """
+    # )
+
+    # enterprise_customers = int(
+    #     enterprise_result[0][0]
+    # )
+
+    
+    # ============================================================
+# LOAD CUSTOMER DATA
+# ============================================================
+
+try:
+
+    # --------------------------------------------------------
+    # KPI QUERY - ONE SQL QUERY FOR ALL METRICS
+    # --------------------------------------------------------
+
+    kpi_result = run_query(
         f"""
-        SELECT COUNT(*)
+        SELECT
+            COUNT(*) AS total_customers,
+
+            SUM(
+                CASE
+                    WHEN customer_segment = 'Premium'
+                    THEN 1
+                    ELSE 0
+                END
+            ) AS premium_customers,
+
+            SUM(
+                CASE
+                    WHEN customer_segment = 'Enterprise'
+                    THEN 1
+                    ELSE 0
+                END
+            ) AS enterprise_customers
+
         FROM {CUSTOMER_TABLE}
         """
     )
 
-    total_customers = int(
-        total_result[0][0]
+    # --------------------------------------------------------
+    # EXTRACT KPI VALUES
+    # --------------------------------------------------------
+
+    total_customers = int(kpi_result[0][0])
+    premium_customers = int(kpi_result[0][1])
+    enterprise_customers = int(kpi_result[0][2])
+
+
+    # ========================================================
+    # KPI CARDS
+    # ========================================================
+
+    col1, col2, col3 = st.columns(3)
+
+    with col1:
+        st.metric(
+            "Total Customers",
+            total_customers
+        )
+
+    with col2:
+        st.metric(
+            "Premium Customers",
+            premium_customers
+        )
+
+    with col3:
+        st.metric(
+            "Enterprise Customers",
+            enterprise_customers
+        )
+
+
+    st.divider()
+
+
+    # ========================================================
+    # CUSTOMER SEARCH
+    # ========================================================
+
+    st.subheader("🔎 Search Customers")
+
+    customer_name = st.text_input(
+        "Customer Name",
+        placeholder="Enter customer name..."
     )
 
+    if customer_name:
 
-    # --------------------------------------------------------
-    # PREMIUM CUSTOMERS
-    # --------------------------------------------------------
-
-    premium_result = run_query(
-        f"""
-        SELECT COUNT(*)
+        search_sql = f"""
+        SELECT
+            customer_id,
+            customer_name,
+            email,
+            city,
+            state,
+            gender,
+            customer_segment,
+            signup_date
         FROM {CUSTOMER_TABLE}
-        WHERE customer_segment = 'Premium'
+        WHERE LOWER(customer_name)
+              LIKE LOWER('%{customer_name}%')
+        ORDER BY customer_name
         """
+
+        results = run_query(search_sql)
+
+        if results:
+
+            st.success(
+                f"Found {len(results)} customer(s)"
+            )
+
+            st.dataframe(
+                results,
+                use_container_width=True
+            )
+
+        else:
+
+            st.warning(
+                "No customers found."
+            )
+
+    else:
+
+        st.info(
+            "Enter a customer name to search."
+        )
+
+
+# ============================================================
+# ERROR HANDLING
+# ============================================================
+
+except Exception as e:
+
+    st.error(
+        "Unable to load customer data."
     )
 
-    premium_customers = int(
-        premium_result[0][0]
-    )
-
-
-    # --------------------------------------------------------
-    # ENTERPRISE CUSTOMERS
-    # --------------------------------------------------------
-
-    enterprise_result = run_query(
-        f"""
-        SELECT COUNT(*)
-        FROM {CUSTOMER_TABLE}
-        WHERE customer_segment = 'Enterprise'
-        """
-    )
-
-    enterprise_customers = int(
-        enterprise_result[0][0]
-    )
-
-
+    st.exception(e)
     # ========================================================
     # KPI CARDS
     # ========================================================
