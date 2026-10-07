@@ -73,14 +73,18 @@ st.divider()
 
 if not WAREHOUSE_ID:
 
-    st.error("WAREHOUSE_ID is not available.")
+    st.error(
+        "WAREHOUSE_ID is not available."
+    )
 
     st.stop()
 
 
 if not CUSTOMER_TABLE:
 
-    st.error("CUSTOMER_TABLE is not available.")
+    st.error(
+        "CUSTOMER_TABLE is not available."
+    )
 
     st.stop()
 
@@ -90,9 +94,10 @@ if not CUSTOMER_TABLE:
 # ============================================================
 
 try:
+
     # ========================================================
-# LOAD FILTER OPTIONS
-# ========================================================
+    # LOAD STATE FILTER OPTIONS
+    # ========================================================
 
     state_result = run_query(
         f"""
@@ -103,7 +108,29 @@ try:
         """
     )
 
-    states = ["All"] + [row[0] for row in state_result]
+    states = ["All"] + [
+        row[0]
+        for row in state_result
+    ]
+
+
+    # ========================================================
+    # LOAD CITY FILTER OPTIONS
+    # ========================================================
+
+    city_result = run_query(
+        f"""
+        SELECT DISTINCT city
+        FROM {CUSTOMER_TABLE}
+        WHERE city IS NOT NULL
+        ORDER BY city
+        """
+    )
+
+    cities = ["All"] + [
+        row[0]
+        for row in city_result
+    ]
 
 
     # ========================================================
@@ -141,9 +168,17 @@ try:
     # EXTRACT KPI VALUES
     # ========================================================
 
-    total_customers = int(kpi_result[0][0])
-    premium_customers = int(kpi_result[0][1])
-    enterprise_customers = int(kpi_result[0][2])
+    total_customers = int(
+        kpi_result[0][0]
+    )
+
+    premium_customers = int(
+        kpi_result[0][1]
+    )
+
+    enterprise_customers = int(
+        kpi_result[0][2]
+    )
 
 
     # ========================================================
@@ -186,9 +221,9 @@ try:
     col1, col2, col3 = st.columns(3)
 
 
-    # --------------------------------------------------------
+    # ========================================================
     # STATE FILTER
-    # --------------------------------------------------------
+    # ========================================================
 
     with col1:
 
@@ -198,28 +233,22 @@ try:
         )
 
 
-    # --------------------------------------------------------
+    # ========================================================
     # CITY FILTER
-    # --------------------------------------------------------
+    # ========================================================
 
     with col2:
 
         city = st.selectbox(
             "City",
-            [
-                "All",
-                "Visakhapatnam",
-                "Vijayawada",
-                "Hyderabad",
-                "Bengaluru",
-                "Chennai"
-            ]
+            cities
         )
 
 
-    # --------------------------------------------------------
-    # SEGMENT FILTER
-    # --------------------------------------------------------
+    # ========================================================
+    # CUSTOMER SEGMENT FILTER
+    # Still hardcoded - we will make this dynamic next
+    # ========================================================
 
     with col3:
 
@@ -271,8 +300,8 @@ try:
     if conditions:
 
         where_clause = (
-            "WHERE " +
-            " AND ".join(conditions)
+            "WHERE "
+            + " AND ".join(conditions)
         )
 
 
@@ -299,14 +328,22 @@ try:
     """
 
 
-    results = run_query(filter_sql)
+    # ========================================================
+    # EXECUTE FILTER QUERY
+    # ========================================================
+
+    results = run_query(
+        filter_sql
+    )
 
 
     # ========================================================
     # CUSTOMER RESULTS
     # ========================================================
 
-    st.subheader("Customer Results")
+    st.subheader(
+        "Customer Results"
+    )
 
 
     if results:
