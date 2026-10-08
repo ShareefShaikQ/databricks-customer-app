@@ -1,5 +1,6 @@
 import os
-import json 
+import json
+
 import streamlit as st
 from databricks.sdk import WorkspaceClient
 
@@ -34,11 +35,12 @@ w = WorkspaceClient()
 # SQL EXECUTION FUNCTION
 # ============================================================
 
-def run_query(sql):
+def run_query(sql, parameters=None):
 
     response = w.statement_execution.execute_statement(
         warehouse_id=WAREHOUSE_ID,
         statement=sql,
+        parameters=parameters,
         wait_timeout="30s"
     )
 
@@ -168,6 +170,7 @@ try:
     kpi_result = run_query(
         f"""
         SELECT
+
             COUNT(*) AS total_customers,
 
             SUM(
@@ -285,35 +288,79 @@ try:
 
 
     # ========================================================
-    # 5. BUILD FILTER CONDITIONS
+    # 5. BUILD PARAMETERIZED FILTERS
     #
-    # NOTE:
-    # This is temporary dynamic SQL.
-    # We will replace this with parameterized SQL
-    # in the next phase.
+    # IMPORTANT:
+    # User-selected values are NOT directly inserted
+    # into the SQL string.
+    #
+    # Example:
+    #
+    # state = :state
+    #
+    # The actual value is sent separately through
+    # the parameters list.
     # ========================================================
 
-    conditions = []
+    filter_conditions = []
 
+    parameters = []
+
+
+    # --------------------------------------------------------
+    # STATE FILTER
+    # --------------------------------------------------------
 
     if state != "All":
 
-        conditions.append(
-            f"state = '{state}'"
+        filter_conditions.append(
+            "state = :state"
         )
 
+        parameters.append(
+            {
+                "name": "state",
+                "value": state,
+                "type": "STRING"
+            }
+        )
+
+
+    # --------------------------------------------------------
+    # CITY FILTER
+    # --------------------------------------------------------
 
     if city != "All":
 
-        conditions.append(
-            f"city = '{city}'"
+        filter_conditions.append(
+            "city = :city"
+        )
+
+        parameters.append(
+            {
+                "name": "city",
+                "value": city,
+                "type": "STRING"
+            }
         )
 
 
+    # --------------------------------------------------------
+    # CUSTOMER SEGMENT FILTER
+    # --------------------------------------------------------
+
     if segment != "All":
 
-        conditions.append(
-            f"customer_segment = '{segment}'"
+        filter_conditions.append(
+            "customer_segment = :segment"
+        )
+
+        parameters.append(
+            {
+                "name": "segment",
+                "value": segment,
+                "type": "STRING"
+            }
         )
 
 
@@ -323,11 +370,11 @@ try:
 
     where_clause = ""
 
-    if conditions:
+    if filter_conditions:
 
         where_clause = (
             "WHERE "
-            + " AND ".join(conditions)
+            + " AND ".join(filter_conditions)
         )
 
 
@@ -337,6 +384,7 @@ try:
 
     filter_sql = f"""
     SELECT
+
         customer_id,
         customer_name,
         email,
@@ -354,8 +402,13 @@ try:
     """
 
 
+    # ========================================================
+    # EXECUTE PARAMETERIZED QUERY
+    # ========================================================
+
     results = run_query(
-        filter_sql
+        filter_sql,
+        parameters
     )
 
 
