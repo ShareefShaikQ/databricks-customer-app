@@ -3,6 +3,7 @@ import json
 
 import streamlit as st
 from databricks.sdk import WorkspaceClient
+from databricks.sdk.service.sql import StatementParameterListItem
 
 
 # ============================================================
@@ -13,7 +14,7 @@ st.set_page_config(
     page_title="Customer Analytics",
     page_icon="📊",
     layout="wide"
-)   
+)
 
 
 # ============================================================
@@ -108,6 +109,7 @@ try:
     filter_options_result = run_query(
         f"""
         SELECT
+
             sort_array(
                 collect_set(state)
             ) AS states,
@@ -125,9 +127,9 @@ try:
     )
 
 
-    # --------------------------------------------------------
+    # ========================================================
     # EXTRACT FILTER OPTIONS
-    # --------------------------------------------------------
+    # ========================================================
 
     states_data = json.loads(
         filter_options_result[0][0]
@@ -194,9 +196,9 @@ try:
     )
 
 
-    # --------------------------------------------------------
+    # ========================================================
     # EXTRACT KPI VALUES
-    # --------------------------------------------------------
+    # ========================================================
 
     total_customers = int(
         kpi_result[0][0]
@@ -289,17 +291,6 @@ try:
 
     # ========================================================
     # 5. BUILD PARAMETERIZED FILTERS
-    #
-    # IMPORTANT:
-    # User-selected values are NOT directly inserted
-    # into the SQL string.
-    #
-    # Example:
-    #
-    # state = :state
-    #
-    # The actual value is sent separately through
-    # the parameters list.
     # ========================================================
 
     filter_conditions = []
@@ -318,11 +309,11 @@ try:
         )
 
         parameters.append(
-            {
-                "name": "state",
-                "value": state,
-                "type": "STRING"
-            }
+            StatementParameterListItem(
+                name="state",
+                value=state,
+                type="STRING"
+            )
         )
 
 
@@ -337,11 +328,11 @@ try:
         )
 
         parameters.append(
-            {
-                "name": "city",
-                "value": city,
-                "type": "STRING"
-            }
+            StatementParameterListItem(
+                name="city",
+                value=city,
+                type="STRING"
+            )
         )
 
 
@@ -356,11 +347,11 @@ try:
         )
 
         parameters.append(
-            {
-                "name": "segment",
-                "value": segment,
-                "type": "STRING"
-            }
+            StatementParameterListItem(
+                name="segment",
+                value=segment,
+                type="STRING"
+            )
         )
 
 
@@ -377,6 +368,7 @@ try:
             + " AND ".join(filter_conditions)
         )
 
+
     # ========================================================
     # 7. CUSTOMER ANALYTICS
     # ========================================================
@@ -387,21 +379,161 @@ try:
 
 
     # ========================================================
-    # CUSTOMERS BY SEGMENT
+    # 7.1 CUSTOMERS BY SEGMENT
     # ========================================================
 
     segment_result = run_query(
         f"""
         SELECT
+
             customer_segment,
+
             COUNT(*) AS customer_count
+
         FROM {CUSTOMER_TABLE}
+
+        {where_clause}
+
         GROUP BY customer_segment
+
         ORDER BY customer_count DESC
-        """
+        """,
+        parameters
     )
+
+
     # ========================================================
-    # 7. CUSTOMER RESULT QUERY
+    # 7.2 CUSTOMERS BY STATE
+    # ========================================================
+
+    state_result = run_query(
+        f"""
+        SELECT
+
+            state,
+
+            COUNT(*) AS customer_count
+
+        FROM {CUSTOMER_TABLE}
+
+        {where_clause}
+
+        GROUP BY state
+
+        ORDER BY customer_count DESC
+        """,
+        parameters
+    )
+
+
+    # ========================================================
+    # 7.3 CUSTOMERS BY CITY
+    # ========================================================
+
+    city_result = run_query(
+        f"""
+        SELECT
+
+            city,
+
+            COUNT(*) AS customer_count
+
+        FROM {CUSTOMER_TABLE}
+
+        {where_clause}
+
+        GROUP BY city
+
+        ORDER BY customer_count DESC
+        """,
+        parameters
+    )
+
+
+    # ========================================================
+    # 7.4 CONVERT RESULTS TO STREAMLIT DATA
+    # ========================================================
+
+    segment_data = {
+        "Customer Segment": [
+            row[0]
+            for row in segment_result
+        ],
+        "Customers": [
+            int(row[1])
+            for row in segment_result
+        ]
+    }
+
+
+    state_data = {
+        "State": [
+            row[0]
+            for row in state_result
+        ],
+        "Customers": [
+            int(row[1])
+            for row in state_result
+        ]
+    }
+
+
+    city_data = {
+        "City": [
+            row[0]
+            for row in city_result
+        ],
+        "Customers": [
+            int(row[1])
+            for row in city_result
+        ]
+    }
+
+
+    # ========================================================
+    # 7.5 SEGMENT CHART
+    # ========================================================
+
+    st.subheader("Customers by Segment")
+
+    st.bar_chart(
+        segment_data,
+        x="Customer Segment",
+        y="Customers"
+    )
+
+
+    # ========================================================
+    # 7.6 STATE AND CITY CHARTS
+    # ========================================================
+
+    col1, col2 = st.columns(2)
+
+
+    with col1:
+
+        st.subheader("Customers by State")
+
+        st.bar_chart(
+            state_data,
+            x="State",
+            y="Customers"
+        )
+
+
+    with col2:
+
+        st.subheader("Customers by City")
+
+        st.bar_chart(
+            city_data,
+            x="City",
+            y="Customers"
+        )
+
+
+    # ========================================================
+    # 8. CUSTOMER RESULT QUERY
     # ========================================================
 
     filter_sql = f"""
@@ -435,12 +567,12 @@ try:
 
 
     # ========================================================
-    # 8. CUSTOMER RESULTS
+    # 9. CUSTOMER RESULTS
     # ========================================================
 
-    st.subheader(
-        "Customer Results"
-    )
+    st.divider()
+
+    st.subheader("Customer Results")
 
 
     if results:
