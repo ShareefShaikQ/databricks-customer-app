@@ -13,7 +13,7 @@ st.set_page_config(
     page_title="Customer Analytics",
     page_icon="📊",
     layout="wide"
-)
+)   
 
 
 # ============================================================
@@ -377,7 +377,29 @@ try:
             + " AND ".join(filter_conditions)
         )
 
+    # ========================================================
+    # 7. CUSTOMER ANALYTICS
+    # ========================================================
 
+    st.divider()
+
+    st.subheader("📊 Customer Analytics")
+
+
+    # ========================================================
+    # CUSTOMERS BY SEGMENT
+    # ========================================================
+
+    segment_result = run_query(
+        f"""
+        SELECT
+            customer_segment,
+            COUNT(*) AS customer_count
+        FROM {CUSTOMER_TABLE}
+        GROUP BY customer_segment
+        ORDER BY customer_count DESC
+        """
+    )
     # ========================================================
     # 7. CUSTOMER RESULT QUERY
     # ========================================================
